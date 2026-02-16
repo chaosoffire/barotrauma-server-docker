@@ -20,6 +20,8 @@ mkdir -p "${MOUNTPATH}/saves"
 mkdir -p "${MOUNTPATH}/mods"
 chown -R steam:steam "${MOUNTPATH}"
 
+SERVERSETTINGS_TEMPLATE="/home/steam/server/serversettings.xml.template"
+CLIENTPERM_TEMPLATE="/home/steam/server/clientpermissions.xml.template"
 
 SERVERSETTINGS="${GAMEPATH}/serversettings.xml"
 PLAYERSETTINGS="${GAMEPATH}/config_player.xml"
@@ -31,24 +33,24 @@ export MNT_CLIENTPERM="${MOUNTPATH}/config/clientpermissions.xml"
 
 # Copy vanilla serversettings if missing in volume
 if [ ! -f "${MNT_SERVERSETTINGS}" ] ; then
-    echo "Initializing serversettings.xml from vanilla default..."
-    if [ -f "${SERVERSETTINGS}" ]; then
-        cp "${SERVERSETTINGS}" "${MNT_SERVERSETTINGS}"
+    echo "Initializing serversettings.xml from template..."
+    if [ -f "${SERVERSETTINGS_TEMPLATE}" ]; then
+        cp "${SERVERSETTINGS_TEMPLATE}" "${MNT_SERVERSETTINGS}"
         chown steam:steam "${MNT_SERVERSETTINGS}"
     else
-        echo "Warning: Vanilla serversettings.xml not found at ${SERVERSETTINGS}"
+        echo "Warning: Template serversettings.xml.template not found at ${SERVERSETTINGS_TEMPLATE}"
         exit 1
     fi
 fi
 
 # Copy vanilla clientpermissions if missing in volume
 if [ ! -f "${MNT_CLIENTPERM}" ] ; then
-    echo "Initializing clientpermissions.xml from vanilla default..."
-    if [ -f "${CLIENTPERM}" ]; then
-        cp "${CLIENTPERM}" "${MNT_CLIENTPERM}"
+    echo "Initializing clientpermissions.xml from template..."
+    if [ -f "${CLIENTPERM_TEMPLATE}" ]; then
+        cp "${CLIENTPERM_TEMPLATE}" "${MNT_CLIENTPERM}"
         chown steam:steam "${MNT_CLIENTPERM}"
     else
-         echo "Warning: Vanilla clientpermissions.xml not found at ${CLIENTPERM}"
+         echo "Warning: Template clientpermissions.xml.template not found at ${CLIENTPERM_TEMPLATE}"
          exit 1
     fi
 fi
