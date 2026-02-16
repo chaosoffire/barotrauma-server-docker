@@ -2,13 +2,14 @@
 set -euo pipefail
 echo "\e[0;32m*****STARTING INSTALL/UPDATE*****\e[0m"
 mkdir -p "${GAMEPATH}"
-chown -R steam:steam "${GAMEPATH}"
-/home/steam/steamcmd/steamcmd.sh +force_install_dir "${GAMEPATH}" +login anonymous +app_update 1026340 validate +quit
+chown -R steam:steam /home/steam
+su - steam -c "/home/steam/steamcmd/steamcmd.sh +force_install_dir \"${GAMEPATH}\" +login anonymous +app_update 1026340 validate +quit"
 
 if [ "${INSTALL_LUA}" = true ] ; then
     echo "\e[0;32m*****INSTALLING SERVERSIDE LUA*****\e[0m"
-    wget -q https://github.com/evilfactory/LuaCsForBarotrauma/releases/download/latest/luacsforbarotrauma_patch_linux_server.tar.gz
-    tar -xzf luacsforbarotrauma_patch_linux_server.tar.gz -C "${GAMEPATH}"
+    su - steam -c "wget -q https://github.com/evilfactory/LuaCsForBarotrauma/releases/download/latest/luacsforbarotrauma_patch_linux_server.tar.gz -O \"${GAMEPATH}/lua_patch.tar.gz\""
+    su - steam -c "tar -xzf \"${GAMEPATH}/lua_patch.tar.gz\" -C \"${GAMEPATH}\""
+    rm -f "${GAMEPATH}/lua_patch.tar.gz"
 fi
 
 echo "\e[0;32m*****INSTALL/UPDATE COMPLETE*****\e[0m"
@@ -17,6 +18,7 @@ mkdir -p "${MOUNTPATH}/config"
 mkdir -p "${MOUNTPATH}/submarines"
 mkdir -p "${MOUNTPATH}/saves"
 mkdir -p "${MOUNTPATH}/mods"
+chown -R steam:steam "${MOUNTPATH}"
 
 
 SERVERSETTINGS="${GAMEPATH}/serversettings.xml"
@@ -32,6 +34,7 @@ if [ ! -f "${MNT_SERVERSETTINGS}" ] ; then
     echo "Initializing serversettings.xml from vanilla default..."
     if [ -f "${SERVERSETTINGS}" ]; then
         cp "${SERVERSETTINGS}" "${MNT_SERVERSETTINGS}"
+        chown steam:steam "${MNT_SERVERSETTINGS}"
     else
         echo "Warning: Vanilla serversettings.xml not found at ${SERVERSETTINGS}"
         exit 1
@@ -43,6 +46,7 @@ if [ ! -f "${MNT_CLIENTPERM}" ] ; then
     echo "Initializing clientpermissions.xml from vanilla default..."
     if [ -f "${CLIENTPERM}" ]; then
         cp "${CLIENTPERM}" "${MNT_CLIENTPERM}"
+        chown steam:steam "${MNT_CLIENTPERM}"
     else
          echo "Warning: Vanilla clientpermissions.xml not found at ${CLIENTPERM}"
          exit 1
@@ -54,6 +58,7 @@ if [ ! -f "${MNT_PLAYERSETTINGS}" ] ; then
     echo "Initializing config_player.xml from vanilla default..."
     if [ -f "${PLAYERSETTINGS}" ]; then
         cp "${PLAYERSETTINGS}" "${MNT_PLAYERSETTINGS}"
+        chown steam:steam "${MNT_PLAYERSETTINGS}"
     else
         echo "Warning: Vanilla config_player.xml not found at ${PLAYERSETTINGS}, skipping."
     fi
@@ -61,7 +66,7 @@ fi
 
 # Apply Universal Configuration via Python
 echo "Applying Universal Configuration..."
-python3 /home/steam/server/configure.py
+su -p steam -c "python3 /home/steam/server/configure.py"
 
 rm -f "${SERVERSETTINGS}"
 rm -f "${CLIENTPERM}"
@@ -88,4 +93,4 @@ ln -sf "${MOUNTPATH}/submarines"        "${GAMEPATH}/Submarines/Added"
 ln -sf "${MOUNTPATH}/saves"             "${SAVEPATH}"
 ln -sf "${MOUNTPATH}/mods"              "${MODPATH}"
 
-./start.sh
+su -p steam -c "export HOME=/home/steam; ./start.sh"

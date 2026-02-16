@@ -1,5 +1,4 @@
 FROM cm2network/steamcmd:root
-LABEL maintainer="thijs@loef.dev"
 RUN dpkg --add-architecture i386; apt-get update; apt-get upgrade -y; apt-get install --no-install-recommends -y \
     libgcc1 \
     lib32stdc++6 \
@@ -17,8 +16,6 @@ ENV SCRIPTPATH=${GAMEPATH}/scripts \
     SAVEPATH="${GAMEPATH}/Daedalic Entertainment GmbH/Barotrauma/Multiplayer" \
     MODPATH="${GAMEPATH}/LocalMods"
 ENV ENTRYSCRIPT=${SCRIPTPATH}/dockerful-entry.sh
-ENV SAVEPATH="${GAMEPATH}/Daedalic Entertainment GmbH/Barotrauma/Multiplayer" \
-    MODPATH="${GAMEPATH}/LocalMods"
 
 COPY ./scripts/* /home/steam/server/
 RUN chmod +x /home/steam/server/init.sh /home/steam/server/start.sh
