@@ -27,10 +27,6 @@ SERVERSETTINGS="${GAMEPATH}/serversettings.xml"
 PLAYERSETTINGS="${GAMEPATH}/config_player.xml"
 CLIENTPERM="${GAMEPATH}/Data/clientpermissions.xml"
 
-export MNT_SERVERSETTINGS="${MOUNTPATH}/config/serversettings.xml"
-MNT_PLAYERSETTINGS="${MOUNTPATH}/config/config_player.xml"
-export MNT_CLIENTPERM="${MOUNTPATH}/config/clientpermissions.xml"
-
 # Copy vanilla serversettings if missing in volume
 if [ ! -f "${MNT_SERVERSETTINGS}" ] ; then
     echo "Initializing serversettings.xml from template..."

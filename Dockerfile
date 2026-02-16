@@ -14,7 +14,10 @@ ENV MOUNTPATH=/barotrauma \
     INSTALL_LUA=
 ENV SCRIPTPATH=${GAMEPATH}/scripts \
     SAVEPATH="${GAMEPATH}/Daedalic Entertainment GmbH/Barotrauma/Multiplayer" \
-    MODPATH="${GAMEPATH}/LocalMods"
+    MODPATH="${GAMEPATH}/LocalMods" \
+    MNT_SERVERSETTINGS="${MOUNTPATH}/config/serversettings.xml" \
+    MNT_PLAYERSETTINGS="${MOUNTPATH}/config/config_player.xml" \
+    MNT_CLIENTPERM="${MOUNTPATH}/config/clientpermissions.xml"
 ENV ENTRYSCRIPT=${SCRIPTPATH}/dockerful-entry.sh
 
 COPY ./scripts/* /home/steam/server/
