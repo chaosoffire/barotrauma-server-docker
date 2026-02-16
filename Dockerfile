@@ -5,31 +5,28 @@ RUN dpkg --add-architecture i386; apt-get update; apt-get upgrade -y; apt-get in
     lib32stdc++6 \
     libicu-dev \
     wget \
+    python3 \
     && apt-get clean autoclean  \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
 ENV MOUNTPATH=/barotrauma \
     GAMEPATH=/home/steam/server/barotrauma \
-    ENTRYSCRIPT=${SCRIPTPATH}/dockerful-entry.sh \
-    SERVERNAME= \
-    PASSWORD= \
-    PUBLICITY= \
-    LANGUAGE= \
-    PORT= \
-    QUERYPORT= \
-    OWNER_STEAMNAME= \
-    OWNER_STEAMID= \
-    MAX_PLAYERS= \
-    INSTALL_LUA= 
+    INSTALL_LUA=
+ENV SCRIPTPATH=${GAMEPATH}/scripts \
+    SAVEPATH="${GAMEPATH}/Daedalic Entertainment GmbH/Barotrauma/Multiplayer" \
+    MODPATH="${GAMEPATH}/LocalMods"
+ENV ENTRYSCRIPT=${SCRIPTPATH}/dockerful-entry.sh
 ENV SAVEPATH="${GAMEPATH}/Daedalic Entertainment GmbH/Barotrauma/Multiplayer" \
-    MODPATH="${GAMEPATH}/LocalMods" \
-    SCRIPTPATH=${GAMEPATH}/scripts 
+    MODPATH="${GAMEPATH}/LocalMods"
 
 COPY ./scripts/* /home/steam/server/
 RUN chmod +x /home/steam/server/init.sh /home/steam/server/start.sh
 
 WORKDIR /home/steam/server
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD timeout 3 bash -c '</dev/tcp/localhost/27015' || exit 1
 
 EXPOSE 27015 27016
 ENTRYPOINT ["/home/steam/server/init.sh"]

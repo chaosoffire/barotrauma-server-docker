@@ -6,25 +6,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Run Shellcheck
         uses: azohra/shell-linter@latest
         with:
-          severity: "error"
+          severity: 'error'
   dockerlint:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
-      - uses: hadolint/hadolint-action@v2.0.0
+        uses: actions/checkout@v4
+      - uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: Dockerfile
-          lint: 'hadolint'
-          failure-threshold: error 
+          failure-threshold: error
   test-build:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Build the Image
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v6
         with:
           push: false
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pytest
+        run: pip install pytest
+      - name: Run unit tests
+        run: python -m pytest tests/ -v

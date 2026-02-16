@@ -1,4 +1,5 @@
 #!/bin/sh
+set -euo pipefail
 echo "\e[0;32m*****STARTING SERVER*****\e[0m"
-cd /home/steam/server/barotrauma
-./DedicatedServer
+cd "${GAMEPATH}"
+exec ./DedicatedServer

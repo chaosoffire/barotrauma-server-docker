@@ -1,100 +1,100 @@
 # Barotrauma Server Docker
 
-![Release](https://img.shields.io/github/v/release/thijsvanloef/barotrauma-server-docker)
-![Docker Pulls](https://img.shields.io/docker/pulls/thijsvanloef/barotrauma-server-docker)
-![Docker Stars](https://img.shields.io/docker/stars/thijsvanloef/barotrauma-server-docker)
-![Image Size](https://img.shields.io/docker/image-size/thijsvanloef/barotrauma-server-docker/latest)
-
-[View on Docker Hub](https://hub.docker.com/repository/docker/thijsvanloef/barotrauma-server-docker)
-
 This is a Dockerized version of the [Barotrauma](https://store.steampowered.com/app/602960/Barotrauma/) dedicated server.
 
-## How to use
+## Features
 
-Keep in mind that you'll need to change the [environment variables](##Environment-variables).
+- **Universal Configuration**: Configure _any_ server setting or client permission via Environment Variables. No more editing XML files manually.
+- **Automatic Updates**: Updates Barotrauma on startup via SteamCMD.
+- **LuaFs Support**: Optional installation of LuaCsForBarotrauma.
 
-### Docker Compose
+## Quick Start (Docker Compose)
 
 This repository includes an example [docker-compose.yml](example/docker-compose.yml) file you can use to setup your server.
 
-```yml
+```yaml
 services:
-   barotrauma:
-      image: thijsvanloef/barotrauma-server-docker
-      restart: unless-stopped
-      container_name: barotrauma-server
-      ports:
-         - 27015:27015/udp
-         - 27016:27016/udp
-      environment:
-         - SERVERNAME=testing # recommended
-         - PASSWORD=password # recommended
-         - OWNER_STEAMNAME= # recommended
-         - OWNER_STEAMID= # recommended
-         - MAX_PLAYERS=10 # optional
-         - PORT=27015 # optional
-         - QUERYPORT=27016 # optional
-      volumes:
-         - ./barotrauma-test-folder:/barotrauma/
+  barotrauma:
+    image: ghcr.io/chaosoffire/barotrauma-server-docker
+    restart: unless-stopped
+    container_name: barotrauma-server
+    ports:
+      - 27015:27015/udp
+      - 27016:27016/udp
+    environment:
+      # Server Settings (Prefix S.)
+      - S.ServerName=Deep Sea Station
+      - S.Password=secret123
+      - S.MaxPlayers=12
+      - S.VoiceChatEnabled=true
+
+      # Client Permissions (Prefix C.Client.<RuleID>)
+      - C.Client.Owner.accountid=STEAM_0:1:12345678
+      - C.Client.Owner.permissions=All
+      - C.Client.Owner.commands=console,heal,spawn
+
+      # Optional: Force re-apply permissions on restart
+      # - C.FORCE_OVERRIDES=true
+    volumes:
+      - ./barotrauma_data:/barotrauma
 ```
 
-### Docker Run
+## Configuration
 
-Change every <> to your own configuration
+This image uses a dynamic configuration script (`configure.py`) that maps Environment Variables to the game's XML configuration files.
 
-```bash
-docker run -d \
-    --name barotrauma-server \
-    -p 27015:27015/udp \
-    -p 27016:27016/udp \
-    -v ./<barotrauma-host-folder>:/barotrauma/ \
-    -e SERVERNAME=<server-name> \
-    -e PASSWORD=password \
-    -e OWNER_STEAMNAME=<> \
-    -e OWNER_STEAMID=<> \
-    -e MAX_PLAYERS=10 \
-    -e PORT=27015 \
-    -e QUERYPORT=27016 \
-    --restart unless-stopped \
-    thijsvanloef/barotrauma-server-docker
+### 1. Server Settings (`serversettings.xml`)
 
-```
+Prefix any environment variable with `S.` to set a value in `serversettings.xml`.
 
-### Volumes
+- **Strategy**: **Continuous Enforcement**. These settings are re-applied every time the container starts.
+- **Syntax**: `S.AttributeName=Value` or `S.ChildNode.AttributeName=Value`.
 
-By default the data of the barotrauma server is not persistant, you'll need to create a folder that you can mount in the container. When starting the server, the following folders will be created:
+| Environment Variable    | XML Equivalent                                               | Description                           |
+| :---------------------- | :----------------------------------------------------------- | :------------------------------------ |
+| `S.ServerName=MyServer` | `<serversettings ServerName="MyServer" ... />`               | Sets the server name.                 |
+| `S.Password=12345`      | `<serversettings Password="12345" ... />`                    | Sets the server password.             |
+| `S.Physics.Gravity=0.5` | `<serversettings><Physics Gravity="0.5" /></serversettings>` | Nested configuration (e.g., Physics). |
 
-| Folder     | Description                                              |
-|------------|----------------------------------------------------------|
-| config     | Folder with clientpermissions.xml and serversettings.xml |
-| saves      | Folder in which the game saves will be saved             |
-| submarines | Folder where you can add custom submarine files          |
+### 2. Client Permissions (`clientpermissions.xml`)
 
-### Environment variables
+Prefix variables with `C.Client.` to configure administrative privileges.
 
-You can use the following values to change the settings of the server on boot.
-It is highly recommended you set the following environment values before starting the server:
+- **Strategy**: **One-Time Seed**. These will be applied **only if** `clientpermissions.xml` (or a marker file) does not exist (first run). This prevents the container from overwriting in-game bans or rank changes on restart.
+- **Force Update**: Set `C.FORCE_OVERRIDES=true` to force strict enforcement on every restart (warning: this will wipe any in-game changes not present in env vars).
 
-* OWNER_STEAMNAME
-* OWNER_STEAMID
-* PASSWORD
+**Syntax**: `C.Client.<UniqueRuleID>.<Attribute>=Value`
 
-| Variable         | Info                                                                | Default Values | Allowed Values |
-|------------------|---------------------------------------------------------------------|----------------|----------------|
-| OWNER_STEAMNAME* | Steam Username of the server administrator                          | none           | String         |
-| OWNER_STEAMID*   | Steam ID of the server administrator                                | none           | String         |
-| PUBLICITY        | Setting to make the server visible in the Barotrauma server browser | false          | true/false     |
-| SERVERNAME       | Name of the server                                                  | Server         | String         |
-| PASSWORD*        | Password used to enter the server (highly recommended)              | none           | String         |
-| MAX_PLAYERS      | Maximum amount of players that are able to join simultaniously      | 10             | 1-16           |
-| PORT**           | Game Port                                                           | 27015          | 1024-65535     |
-| QUERY_PORT**     | Query Port                                                          | 27016          | 1024-65535     |
-| INSTALL_LUA      |  adds Lua and Cs modding support                                    | false          | true/false     |
+| Environment Variable                 | Description                                                          |
+| :----------------------------------- | :------------------------------------------------------------------- |
+| `C.Client.Admin.accountid=STEAM_...` | SteamID64 or SteamID to grant permissions to.                        |
+| `C.Client.Admin.permissions=All`     | Permission set (None, All, or comma-separated list like `Kick,Ban`). |
+| `C.Client.Admin.commands=heal,spawn` | Specific console commands allowed for this user.                     |
+| `C.Client.Admin.name=MyName`         | (Optional) Name label for the client.                                |
 
-*highly recommended to set
+## Volumes and Persistence
 
-**advanced users only if you don't run multiple servers, you'll most likely not want to change this
+Mount a volume to `/barotrauma` to persist your server data.
+
+| Container Path           | Description                                                      |
+| :----------------------- | :--------------------------------------------------------------- |
+| `/barotrauma/config`     | Configuration files (serversettings.xml, clientpermissions.xml). |
+| `/barotrauma/saves`      | Campaign save files.                                             |
+| `/barotrauma/submarines` | Custom submarines.                                               |
+| `/barotrauma/mods`       | Workshop mods.                                                   |
+
+## Ports
+
+| Port    | Type | Description      |
+| :------ | :--- | :--------------- |
+| `27015` | UDP  | Game Port        |
+| `27016` | UDP  | Steam Query Port |
+
+## Advanced: LuaCsForBarotrauma
+
+To install LuaCsForBarotrauma (server-side Lua), set the environment variable:
+`INSTALL_LUA=true`
 
 ## Reporting Issues/Feature Requests
 
-Issues/Feature requests can be submitted by using [this link](https://github.com/thijsvanloef/barotrauma-server-docker/issues/new/choose).
+Issues/Feature requests can be submitted by using [this link](https://github.com/chaosoffire/barotrauma-server-docker/issues/new/choose).

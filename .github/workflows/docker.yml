@@ -1,13 +1,13 @@
-name: Release
+name: Docker-Image-Dev
 on:
-  release:
-    types: [published]
+  push:
+    branches: [main]
 
 jobs:
-  release:
+  push:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -25,15 +25,13 @@ jobs:
             ghcr.io/${{ github.repository }}
           # generate Docker tags based on the following events/attributes
           tags: |
-            type=semver,pattern=v{{version}}
-            type=semver,pattern=v{{major}}.{{minor}}
-            type=semver,pattern=v{{major}}
+            type=raw,value=dev
           # always generate latest tag on push
-          flavor: |
-            latest=true
+
       - name: Build and push to GitHub Container Registry
         id: docker_build
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ steps.meta.outputs.tags }}

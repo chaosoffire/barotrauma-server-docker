@@ -1,13 +1,14 @@
 #!/bin/sh
+set -euo pipefail
 echo "\e[0;32m*****STARTING INSTALL/UPDATE*****\e[0m"
-mkdir -p /home/steam/server/barotrauma
-chown -R steam:steam /home/steam/server/barotrauma
-/home/steam/steamcmd/steamcmd.sh +force_install_dir "/home/steam/server/barotrauma" +login anonymous +app_update 1026340 validate +quit
+mkdir -p "${GAMEPATH}"
+chown -R steam:steam "${GAMEPATH}"
+/home/steam/steamcmd/steamcmd.sh +force_install_dir "${GAMEPATH}" +login anonymous +app_update 1026340 validate +quit
 
 if [ "${INSTALL_LUA}" = true ] ; then
     echo "\e[0;32m*****INSTALLING SERVERSIDE LUA*****\e[0m"
     wget -q https://github.com/evilfactory/LuaCsForBarotrauma/releases/download/latest/luacsforbarotrauma_patch_linux_server.tar.gz
-    tar -xzf luacsforbarotrauma_patch_linux_server.tar.gz -C barotrauma
+    tar -xzf luacsforbarotrauma_patch_linux_server.tar.gz -C "${GAMEPATH}"
 fi
 
 echo "\e[0;32m*****INSTALL/UPDATE COMPLETE*****\e[0m"
@@ -17,69 +18,54 @@ mkdir -p "${MOUNTPATH}/submarines"
 mkdir -p "${MOUNTPATH}/saves"
 mkdir -p "${MOUNTPATH}/mods"
 
-CLIENTPERM_TEMPLATE=/home/steam/server/clientpermissions_template.xml
-SERVERSETT_TEMPLATE=/home/steam/server/serversettings_template.xml
 
-SERVERSETTINGS=${GAMEPATH}/serversettings.xml
-PLAYERSETTINGS=${GAMEPATH}/config_player.xml
-CLIENTPERM=${GAMEPATH}/Data/clientpermissions.xml
+SERVERSETTINGS="${GAMEPATH}/serversettings.xml"
+PLAYERSETTINGS="${GAMEPATH}/config_player.xml"
+CLIENTPERM="${GAMEPATH}/Data/clientpermissions.xml"
 
-MNT_SERVERSETTINGS=${MOUNTPATH}/config/serversettings.xml
-MNT_PLAYERSETTINGS=${MOUNTPATH}/config/config_player.xml
-MNT_CLIENTPERM=${MOUNTPATH}/config/clientpermissions.xml
+export MNT_SERVERSETTINGS="${MOUNTPATH}/config/serversettings.xml"
+MNT_PLAYERSETTINGS="${MOUNTPATH}/config/config_player.xml"
+export MNT_CLIENTPERM="${MOUNTPATH}/config/clientpermissions.xml"
 
-# Config for the serversettings.xml
+# Copy vanilla serversettings if missing in volume
 if [ ! -f "${MNT_SERVERSETTINGS}" ] ; then
-    cp "${SERVERSETT_TEMPLATE}" "${MNT_SERVERSETTINGS}"
-    echo "\e[0;32m*****CREATING SERVERSETTINGS.XML:*****\e[0m"
-    if [ -n "${SERVERNAME}" ] ; then
-        echo "SERVERNAME=${SERVERNAME}"
-        sed -i "s/name=.*/name=\"${SERVERNAME}\"/" "${MNT_SERVERSETTINGS}"
-    fi ;
-    if [ -n "${PASSWORD}" ] ; then
-        echo "PASSWORD=redacted"
-        sed -i "s/password=.*/password=\"${PASSWORD}\"/" "${MNT_SERVERSETTINGS}"
-    fi ;
-    if [ -n "${PUBLICITY}" ] ; then
-        echo "PUBLICITY=${PUBLICITY}"
-        sed -i "s/public=.*/public=\"${PUBLICITY}\"/" "${MNT_SERVERSETTINGS}"
-    fi ;
-    if [ -n "${PORT}" ] ; then
-        echo "PORT=${PORT}"
-        sed -i "s/port=.*/port=\"${PORT}\"/" "${MNT_SERVERSETTINGS}"
-    fi ;
-    if [ -n "${QUERYPORT}" ] ; then
-        echo "QUERYPORT=${QUERYPORT}"
-        sed -i "s/queryport=.*/queryport=\"${QUERYPORT}\"/" "${MNT_SERVERSETTINGS}"
-    fi ;
-    if [ -n "${MAX_PLAYERS}" ] ; then
-        echo "MAX_PLAYERS=${MAX_PLAYERS}"
-        sed -i "s/maxplayers=.*/maxplayers=\"${MAX_PLAYERS}\"/" "${MNT_SERVERSETTINGS}"
-    fi ;
-    
-fi ;
-
-if [ ! -f "${MNT_CLIENTPERM}" ] ; then
-    echo "\e[0;32m*****CREATING CLIENTPERMISSIONS.XML:*****\e[0m"
-    if [ -n "${OWNER_STEAMNAME}" ] && [ -n "${OWNER_STEAMID}" ] ; then
-        echo "OWNER_STEAMNAME=${OWNER_STEAMNAME}"
-        echo "OWNER_STEAMID=${OWNER_STEAMID}"
-        cp "${CLIENTPERM_TEMPLATE}" "${MNT_CLIENTPERM}"
-        sed -i "s/name=BARO_OWNER_STEAMNAME/name=\"${OWNER_STEAMNAME}\"/" "${MNT_CLIENTPERM}"
-        sed -i "s/steamid=BARO_OWNER_STEAMID/steamid=\"${OWNER_STEAMID}\"/" "${MNT_CLIENTPERM}"
-    else 
-        cp "${CLIENTPERM}" "${MNT_CLIENTPERM}"
-    fi ;
-fi ;
-
-if [ ! -f "${MNT_PLAYERSETTINGS}" ] ; then
-    echo "\e[0;32m*****CREATING CONFIG_PLAYER.XML:*****\e[0m"
-    cp "${PLAYERSETTINGS}" "${MNT_PLAYERSETTINGS}"
+    echo "Initializing serversettings.xml from vanilla default..."
+    if [ -f "${SERVERSETTINGS}" ]; then
+        cp "${SERVERSETTINGS}" "${MNT_SERVERSETTINGS}"
+    else
+        echo "Warning: Vanilla serversettings.xml not found at ${SERVERSETTINGS}"
+        exit 1
+    fi
 fi
 
-rm "${SERVERSETTINGS}"
-rm "${CLIENTPERM}"
-rm "${PLAYERSETTINGS}"
+# Copy vanilla clientpermissions if missing in volume
+if [ ! -f "${MNT_CLIENTPERM}" ] ; then
+    echo "Initializing clientpermissions.xml from vanilla default..."
+    if [ -f "${CLIENTPERM}" ]; then
+        cp "${CLIENTPERM}" "${MNT_CLIENTPERM}"
+    else
+         echo "Warning: Vanilla clientpermissions.xml not found at ${CLIENTPERM}"
+         exit 1
+    fi
+fi
+
+# Copy vanilla config_player.xml if missing in volume
+if [ ! -f "${MNT_PLAYERSETTINGS}" ] ; then
+    echo "Initializing config_player.xml from vanilla default..."
+    if [ -f "${PLAYERSETTINGS}" ]; then
+        cp "${PLAYERSETTINGS}" "${MNT_PLAYERSETTINGS}"
+    else
+        echo "Warning: Vanilla config_player.xml not found at ${PLAYERSETTINGS}, skipping."
+    fi
+fi
+
+# Apply Universal Configuration via Python
+echo "Applying Universal Configuration..."
+python3 /home/steam/server/configure.py
+
+rm -f "${SERVERSETTINGS}"
+rm -f "${CLIENTPERM}"
+rm -f "${PLAYERSETTINGS}"
 
 ln -s "${MNT_SERVERSETTINGS}" "${SERVERSETTINGS}"
 ln -s "${MNT_PLAYERSETTINGS}" "${PLAYERSETTINGS}"
